@@ -6,12 +6,12 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:starter_architecture_flutter_firebase/app/onboarding/onboard_welcome_page.dart';
 
 import 'app/auth_widget.dart';
 import 'app/home/home_page.dart';
 import 'app/onboarding/onboarding_page.dart';
 import 'app/onboarding/onboarding_view_model.dart';
-import 'app/sign_in/sign_in_page.dart';
 import 'app/top_level_providers.dart';
 import 'app_options/app_options.dart';
 import 'constants/app_constants.dart';
@@ -39,7 +39,7 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({
     Key key,
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.dark,
   }) : super(key: key);
   final ThemeMode themeMode;
   @override
@@ -69,7 +69,10 @@ class MyApp extends StatelessWidget {
               builder: (context, watch, _) {
                 final didCompleteOnboarding =
                     watch(onboardingViewModelProvider.state);
-                return didCompleteOnboarding ? SignInPage() : OnboardingPage();
+//                return didCompleteOnboarding ? SignInPage() : OnboardingPage();
+                return didCompleteOnboarding
+                    ? OnboardWelcomePage()
+                    : OnboardingPage();
               },
             ),
             signedInBuilder: (_) => HomePage(),

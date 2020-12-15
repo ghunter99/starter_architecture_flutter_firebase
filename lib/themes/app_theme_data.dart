@@ -16,7 +16,7 @@ extension AppThemeDataExtension on String {
 }
 
 class AppThemeData {
-  static const _lightFillColor = Colors.black;
+  static const _lightFillColor = const Color.fromRGBO(51, 51, 51, 1.0);
   static const _darkFillColor = Colors.white;
 
   static final Color _lightFocusColor = Colors.black.withOpacity(0.12);
@@ -88,7 +88,7 @@ class AppThemeData {
     secondaryVariant: Color.fromRGBO(250, 251, 251, 1),
     background: Color.fromRGBO(230, 235, 235, 1),
     surface: Color.fromRGBO(250, 251, 251, 1),
-    onBackground: Colors.white,
+    onBackground: Color.fromRGBO(74, 73, 78, 1), //Colors.white,
     error: _lightFillColor,
     onError: Colors.red,
     onPrimary: _lightFillColor,
@@ -106,7 +106,8 @@ class AppThemeData {
     background:
         Color.fromRGBO(43, 48, 52, 1), // Color.fromRGBO(69, 27, 111, 1),
     surface: Color.fromRGBO(31, 25, 41, 1),
-    onBackground: Color(0x0DFFFFFF), // White with 0.05 opacity
+    onBackground: Color.fromRGBO(
+        250, 251, 251, 1), //Color(0x0DFFFFFF), // White with 0.05 opacity
     error: _darkFillColor,
     onError: Colors.yellow,
     onPrimary: _darkFillColor,
