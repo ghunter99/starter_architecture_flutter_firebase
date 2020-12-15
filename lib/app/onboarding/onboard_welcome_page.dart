@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:starter_architecture_flutter_firebase/app/onboarding/onboard_log_in_page.dart';
 import 'package:starter_architecture_flutter_firebase/app/onboarding/onboard_sign_up_page.dart';
 import 'package:starter_architecture_flutter_firebase/app/onboarding/onboarding_view_model.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
@@ -108,7 +109,17 @@ class OnboardWelcomePage extends StatelessWidget {
                           ),
                         ),
                         SizedBox(height: 8),
-                        _LoginButton(),
+                        _LoginButton(
+                          onPressed: () async {
+                            await Navigator.push<bool>(
+                              context,
+                              platformPageRoute(
+                                context: context,
+                                builder: (_) => OnboardLogInPage(),
+                              ),
+                            );
+                          },
+                        ),
                         SizedBox(height: 40),
                       ],
                     ),
@@ -124,7 +135,10 @@ class OnboardWelcomePage extends StatelessWidget {
 }
 
 class _LoginButton extends StatelessWidget {
-  Widget _buildContent(BuildContext context) {
+  _LoginButton({@required this.onPressed});
+  final VoidCallback onPressed;
+
+  Widget _logInText(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -155,13 +169,13 @@ class _LoginButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isCupertino(context)) {
       return PlatformButton(
-        onPressed: () {},
-        child: _buildContent(context),
+        onPressed: onPressed,
+        child: _logInText(context),
       );
     }
     return InkWell(
-      onTap: () {},
-      child: _buildContent(context),
+      onTap: onPressed,
+      child: _logInText(context),
     );
   }
 }

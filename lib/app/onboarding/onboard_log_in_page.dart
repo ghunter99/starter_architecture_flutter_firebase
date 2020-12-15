@@ -5,17 +5,15 @@ import 'package:starter_architecture_flutter_firebase/styled_components/styled_b
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_ok_dialog.dart';
 
-import 'onboard_name_page.dart';
-
-class OnboardSignupPage extends StatefulWidget {
+class OnboardLogInPage extends StatefulWidget {
   @override
-  _OnboardSignupPageState createState() => _OnboardSignupPageState();
+  _OnboardLogInPageState createState() => _OnboardLogInPageState();
 }
 
-class _OnboardSignupPageState extends State<OnboardSignupPage> {
+class _OnboardLogInPageState extends State<OnboardLogInPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailFocusNode = FocusNode();
-  final _passwordFocusNode = FocusNode();
+  final _lastNameFocusNode = FocusNode();
 
   String _email;
   String _password;
@@ -31,7 +29,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
   void dispose() {
     // Clean up the focus nodes when the Form is disposed
     _emailFocusNode.dispose();
-    _passwordFocusNode.dispose();
+    _lastNameFocusNode.dispose();
     super.dispose();
   }
 
@@ -160,7 +158,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
       },
       onSaved: (str) => _email = str.trim(),
       onFieldSubmitted: (str) =>
-          FocusScope.of(context).requestFocus(_passwordFocusNode),
+          FocusScope.of(context).requestFocus(_lastNameFocusNode),
     );
   }
 
@@ -200,10 +198,10 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
             ),
         fillColor: Theme.of(context).colorScheme.secondary,
         filled: true,
-        labelText: 'Password (8+ characters)',
+        labelText: 'Password',
         contentPadding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
       ),
-      focusNode: _passwordFocusNode,
+      focusNode: _lastNameFocusNode,
       onChanged: (value) {
         _email = value;
         setState(() {});
@@ -214,19 +212,19 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
     );
   }
 
-  Widget _buildSignUpButton() {
+  Widget _buildLogInButton() {
     return StyledButton(
       color: Theme.of(context).colorScheme.primary,
       textColor: Colors.white,
       borderColor: Theme.of(context).colorScheme.primary,
       onPressed: () async {
-        await Navigator.push<bool>(
-          context,
-          platformPageRoute(
-            context: context,
-            builder: (_) => OnboardNamePage(),
-          ),
-        );
+        // await Navigator.push<bool>(
+        //   context,
+        //   platformPageRoute(
+        //     context: context,
+        //     builder: (_) {},
+        //   ),
+        // );
       },
       child: Row(
         children: [
@@ -234,7 +232,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
-                'Agree and Sign Up',
+                'Log In',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.button.copyWith(
                       color: Colors.white,
@@ -253,7 +251,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
     final List<Widget> list = [
       if (isCupertino(context)) SizedBox(height: 16),
       Text(
-        'Sign Up with Email',
+        'Log In',
         style: Theme.of(context).textTheme.headline3.copyWith(
               color: Theme.of(context).colorScheme.onBackground,
             ),
@@ -264,20 +262,14 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
       const SizedBox(height: 32.0),
       _buildPasswordTextFormField(),
       const SizedBox(height: 16.0),
-      _TermsParagraph(
-        onPressed: () => StyledOkDialog.show(
-          context,
-          title: 'Not implemented yet',
-        ),
-      ),
-      _PrivacyParagraph(
+      _ForgotPasswordButton(
         onPressed: () => StyledOkDialog.show(
           context,
           title: 'Not implemented yet',
         ),
       ),
       const SizedBox(height: 16.0),
-      _buildSignUpButton(),
+      _buildLogInButton(),
     ];
 
     // wrap in a form
@@ -341,84 +333,15 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
   }
 }
 
-class _TermsParagraph extends StatelessWidget {
-  _TermsParagraph({@required this.onPressed});
-  final VoidCallback onPressed;
-
-  Widget _text(BuildContext context, String text) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.overline.copyWith(
-            fontWeight: FontWeight.w300,
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onBackground,
-          ),
-    );
-  }
-
-  Widget _TermsText(BuildContext context) {
-    return Text(
-      'Terms of Service',
-      style: Theme.of(context).textTheme.overline.copyWith(
-            fontWeight: FontWeight.w300,
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onBackground,
-            decoration: TextDecoration.underline,
-          ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      runSpacing: 0,
-      children: [
-        _text(context, 'By signing up you are agreeing to our '),
-        if (isCupertino(context))
-          PlatformButton(
-            padding: EdgeInsets.zero,
-            onPressed: onPressed,
-            cupertino: (_, __) => CupertinoButtonData(
-              minSize: 30,
-              //padding: EdgeInsets.zero,
-            ),
-            child: _TermsText(context),
-          ),
-        if (!isCupertino(context))
-          InkWell(
-            onTap: onPressed,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: _TermsText(context),
-            ),
-          ),
-        _text(context, '.'),
-      ],
-    );
-  }
-}
-
-class _PrivacyParagraph extends StatelessWidget {
-  _PrivacyParagraph({
+class _ForgotPasswordButton extends StatelessWidget {
+  _ForgotPasswordButton({
     @required this.onPressed,
   });
   final VoidCallback onPressed;
 
-  Widget _text(BuildContext context, String text) {
+  Widget _ForgotPasswordText(BuildContext context) {
     return Text(
-      text,
-      style: Theme.of(context).textTheme.overline.copyWith(
-            fontWeight: FontWeight.w300,
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onBackground,
-          ),
-    );
-  }
-
-  Widget _PrivacyText(BuildContext context) {
-    return Text(
-      'Privacy Policy',
+      'Forgot Password',
       style: Theme.of(context).textTheme.overline.copyWith(
             fontWeight: FontWeight.w300,
             fontSize: 12,
@@ -434,7 +357,6 @@ class _PrivacyParagraph extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       runSpacing: 0,
       children: [
-        _text(context, 'View our '),
         if (isCupertino(context))
           PlatformButton(
             padding: EdgeInsets.zero,
@@ -443,17 +365,16 @@ class _PrivacyParagraph extends StatelessWidget {
               minSize: 30,
               //padding: EdgeInsets.zero,
             ),
-            child: _PrivacyText(context),
+            child: _ForgotPasswordText(context),
           ),
         if (!isCupertino(context))
           InkWell(
             onTap: onPressed,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: _PrivacyText(context),
+              child: _ForgotPasswordText(context),
             ),
           ),
-        _text(context, '.'),
       ],
     );
   }
