@@ -1,10 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_back_button.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_ok_dialog.dart';
+import 'package:starter_architecture_flutter_firebase/util.dart';
+import 'package:string_validators/string_validators.dart';
 
+import '../top_level_providers.dart';
 import 'onboard_name_page.dart';
 
 class OnboardSignupPage extends StatefulWidget {
@@ -17,12 +22,14 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
 
+  bool _isLoading;
   String _email;
   String _password;
 
   @override
   void initState() {
     super.initState();
+    _isLoading = false;
     _email = '';
     _password = '';
   }
@@ -35,56 +42,16 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
     super.dispose();
   }
 
-  String _firstNameValidator(String name) {
-    // check length
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      return 'Please enter first name\n';
-    }
-    if (trimmedName.length > 35) {
-      return 'Name can have at most 35 characters\n';
-    }
-    // check doesn't contain special characters or emoji
-    // except for hyphen, single quote, apostrophe or period characters
-    final str1 = trimmedName
-        .replaceAll('-', '')
-        .replaceAll("'", '')
-        .replaceAll('’', '')
-        .replaceAll('.', '');
-    final str2 = trimmedName.replaceAll(RegExp(r'(_|[^\w\s])+'), '');
-    if (str1 == str2) {
-      return null;
-    }
-    return 'Name can not contain special characters or emoji';
-  }
-
-  String _lastNameValidator(String name) {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      return 'Please enter last name\n';
-    }
-    if (trimmedName.length > 35) {
-      return 'Name can have at most 35 characters\n';
-    }
-    // check doesn't contain special characters or emoji
-    // except for hyphen, single quote, apostrophe or period characters
-    final str1 = trimmedName
-        .replaceAll('-', '')
-        .replaceAll("'", '')
-        .replaceAll('’', '')
-        .replaceAll('.', '');
-    final str2 = trimmedName.replaceAll(RegExp(r'(_|[^\w\s])+'), '');
-    if (str1 == str2) {
-      return null;
-    }
-    return 'Name can not contain special characters or emoji';
-  }
-
   void _onPressedBackButton(BuildContext context) {
+    // hide keyboard if neccesary
+    FocusScope.of(context).requestFocus(FocusNode());
     Navigator.pop(context);
   }
 
-  void _onFormSubmit() {
+  void _onFormSubmit() async {
+    if (_isLoading) {
+      return;
+    }
     // hide keyboard if neccesary
     FocusScope.of(context).requestFocus(FocusNode());
     final form = _formKey.currentState;
@@ -92,7 +59,42 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
       return;
     }
     form.save();
-    Navigator.pop(context);
+    UserCredential userCredential;
+    setState(() => _isLoading = true);
+    try {
+      final firebaseAuth = context.read(firebaseAuthProvider);
+      userCredential = await firebaseAuth.createUserWithEmailAndPassword(
+          email: _email, password: _password);
+    } on PlatformException catch (e) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (_) => StyledOkDialog(
+          title: 'Failed to sign up',
+          content: util.stripFirebaseHeaderFromMessage(e.message),
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    } on Exception catch (e) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (_) => StyledOkDialog(
+          title: 'Failed to sign up',
+          content: util.stripFirebaseHeaderFromMessage('$e'),
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+    setState(() => _isLoading = false);
+    print('user credentials: $userCredential');
+    await Navigator.push<bool>(
+      context,
+      platformPageRoute(
+        context: context,
+        builder: (_) => OnboardNamePage(),
+      ),
+    );
   }
 
   PlatformAppBar _buildAppBar(BuildContext context) {
@@ -153,7 +155,10 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
         contentPadding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
       ),
       focusNode: _emailFocusNode,
-      validator: _firstNameValidator,
+      inputFormatters: <TextInputFormatter>[
+        ValidatorInputFormatter(editingValidator: EmailEditingRegexValidator()),
+      ],
+      validator: util.emailValidator,
       onChanged: (value) {
         _email = value;
         setState(() {});
@@ -200,7 +205,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
             ),
         fillColor: Theme.of(context).colorScheme.secondary,
         filled: true,
-        labelText: 'Password (8+ characters)',
+        labelText: 'Password',
         contentPadding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
       ),
       focusNode: _passwordFocusNode,
@@ -208,7 +213,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
         _email = value;
         setState(() {});
       },
-      validator: _lastNameValidator,
+      validator: util.passwordValidator,
       onSaved: (str) => _password = str.trim(),
       onFieldSubmitted: (_) => _onFormSubmit(),
     );
@@ -219,19 +224,12 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
       color: Theme.of(context).colorScheme.primary,
       textColor: Colors.white,
       borderColor: Theme.of(context).colorScheme.primary,
-      onPressed: () async {
-        await Navigator.push<bool>(
-          context,
-          platformPageRoute(
-            context: context,
-            builder: (_) => OnboardNamePage(),
-          ),
-        );
-      },
+      onPressed: _onFormSubmit,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Padding(
+          if (!_isLoading)
+            Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
                 'Agree and Sign Up',
@@ -243,7 +241,16 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
+          if (_isLoading)
+            SizedBox(
+              height: 20,
+              width: 20,
+              child: PlatformCircularProgressIndicator(
+                material: (_, __) => MaterialProgressIndicatorData(
+                  backgroundColor: Colors.white,
+                ),
+              ),
+            )
         ],
       ),
     );
@@ -264,16 +271,22 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
       const SizedBox(height: 32.0),
       _buildPasswordTextFormField(),
       const SizedBox(height: 16.0),
-      _TermsParagraph(
-        onPressed: () => StyledOkDialog.show(
-          context,
-          title: 'Not implemented yet',
+      Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: _TermsParagraph(
+          onPressed: () => StyledOkDialog.show(
+            context,
+            title: 'Not implemented yet',
+          ),
         ),
       ),
-      _PrivacyParagraph(
-        onPressed: () => StyledOkDialog.show(
-          context,
-          title: 'Not implemented yet',
+      Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: _PrivacyParagraph(
+          onPressed: () => StyledOkDialog.show(
+            context,
+            title: 'Not implemented yet',
+          ),
         ),
       ),
       const SizedBox(height: 16.0),

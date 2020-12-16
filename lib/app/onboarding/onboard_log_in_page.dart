@@ -1,9 +1,16 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_back_button.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_ok_dialog.dart';
+import 'package:starter_architecture_flutter_firebase/util.dart';
+import 'package:string_validators/string_validators.dart';
+
+import '../top_level_providers.dart';
 
 class OnboardLogInPage extends StatefulWidget {
   @override
@@ -13,14 +20,16 @@ class OnboardLogInPage extends StatefulWidget {
 class _OnboardLogInPageState extends State<OnboardLogInPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailFocusNode = FocusNode();
-  final _lastNameFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
 
+  bool _isLoading;
   String _email;
   String _password;
 
   @override
   void initState() {
     super.initState();
+    _isLoading = false;
     _email = '';
     _password = '';
   }
@@ -29,60 +38,20 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
   void dispose() {
     // Clean up the focus nodes when the Form is disposed
     _emailFocusNode.dispose();
-    _lastNameFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
-  String _firstNameValidator(String name) {
-    // check length
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      return 'Please enter first name\n';
-    }
-    if (trimmedName.length > 35) {
-      return 'Name can have at most 35 characters\n';
-    }
-    // check doesn't contain special characters or emoji
-    // except for hyphen, single quote, apostrophe or period characters
-    final str1 = trimmedName
-        .replaceAll('-', '')
-        .replaceAll("'", '')
-        .replaceAll('’', '')
-        .replaceAll('.', '');
-    final str2 = trimmedName.replaceAll(RegExp(r'(_|[^\w\s])+'), '');
-    if (str1 == str2) {
-      return null;
-    }
-    return 'Name can not contain special characters or emoji';
-  }
-
-  String _lastNameValidator(String name) {
-    final trimmedName = name.trim();
-    if (trimmedName.isEmpty) {
-      return 'Please enter last name\n';
-    }
-    if (trimmedName.length > 35) {
-      return 'Name can have at most 35 characters\n';
-    }
-    // check doesn't contain special characters or emoji
-    // except for hyphen, single quote, apostrophe or period characters
-    final str1 = trimmedName
-        .replaceAll('-', '')
-        .replaceAll("'", '')
-        .replaceAll('’', '')
-        .replaceAll('.', '');
-    final str2 = trimmedName.replaceAll(RegExp(r'(_|[^\w\s])+'), '');
-    if (str1 == str2) {
-      return null;
-    }
-    return 'Name can not contain special characters or emoji';
-  }
-
   void _onPressedBackButton(BuildContext context) {
+    // hide keyboard if neccesary
+    FocusScope.of(context).requestFocus(FocusNode());
     Navigator.pop(context);
   }
 
-  void _onFormSubmit() {
+  void _onFormSubmit() async {
+    if (_isLoading) {
+      return;
+    }
     // hide keyboard if neccesary
     FocusScope.of(context).requestFocus(FocusNode());
     final form = _formKey.currentState;
@@ -90,6 +59,36 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
       return;
     }
     form.save();
+    UserCredential userCredential;
+    setState(() => _isLoading = true);
+    try {
+      final firebaseAuth = context.read(firebaseAuthProvider);
+      userCredential = await firebaseAuth.signInWithCredential(
+          EmailAuthProvider.credential(email: _email, password: _password));
+    } on PlatformException catch (e) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (_) => StyledOkDialog(
+          title: 'Failed to log in',
+          content: util.stripFirebaseHeaderFromMessage(e.message),
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    } on Exception catch (e) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (_) => StyledOkDialog(
+          title: 'Failed to log in',
+          content: util.stripFirebaseHeaderFromMessage('$e'),
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+    setState(() => _isLoading = false);
+    print('user credentials: $userCredential');
+    // TODO: need to check if we have needed profile info
     Navigator.pop(context);
   }
 
@@ -151,14 +150,17 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
         contentPadding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
       ),
       focusNode: _emailFocusNode,
-      validator: _firstNameValidator,
+      inputFormatters: <TextInputFormatter>[
+        ValidatorInputFormatter(editingValidator: EmailEditingRegexValidator()),
+      ],
+      validator: util.emailValidator,
       onChanged: (value) {
         _email = value;
         setState(() {});
       },
       onSaved: (str) => _email = str.trim(),
       onFieldSubmitted: (str) =>
-          FocusScope.of(context).requestFocus(_lastNameFocusNode),
+          FocusScope.of(context).requestFocus(_passwordFocusNode),
     );
   }
 
@@ -201,12 +203,12 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
         labelText: 'Password',
         contentPadding: const EdgeInsets.fromLTRB(12.0, 8.0, 12.0, 4.0),
       ),
-      focusNode: _lastNameFocusNode,
+      focusNode: _passwordFocusNode,
       onChanged: (value) {
-        _email = value;
+        _password = value;
         setState(() {});
       },
-      validator: _lastNameValidator,
+      validator: util.passwordValidator,
       onSaved: (str) => _password = str.trim(),
       onFieldSubmitted: (_) => _onFormSubmit(),
     );
@@ -217,19 +219,12 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
       color: Theme.of(context).colorScheme.primary,
       textColor: Colors.white,
       borderColor: Theme.of(context).colorScheme.primary,
-      onPressed: () async {
-        // await Navigator.push<bool>(
-        //   context,
-        //   platformPageRoute(
-        //     context: context,
-        //     builder: (_) {},
-        //   ),
-        // );
-      },
+      onPressed: _onFormSubmit,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: Padding(
+          if (!_isLoading)
+            Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
                 'Log In',
@@ -241,7 +236,16 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
+          if (_isLoading)
+            SizedBox(
+              height: 20,
+              width: 20,
+              child: PlatformCircularProgressIndicator(
+                material: (_, __) => MaterialProgressIndicatorData(
+                  backgroundColor: Colors.white,
+                ),
+              ),
+            )
         ],
       ),
     );
@@ -262,10 +266,13 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
       const SizedBox(height: 32.0),
       _buildPasswordTextFormField(),
       const SizedBox(height: 16.0),
-      _ForgotPasswordButton(
-        onPressed: () => StyledOkDialog.show(
-          context,
-          title: 'Not implemented yet',
+      Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: _ForgotPasswordButton(
+          onPressed: () => StyledOkDialog.show(
+            context,
+            title: 'Not implemented yet',
+          ),
         ),
       ),
       const SizedBox(height: 16.0),
