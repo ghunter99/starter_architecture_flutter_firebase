@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:starter_architecture_flutter_firebase/model/user_profile.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
+import 'package:starter_architecture_flutter_firebase/styled_components/styled_exception_dialog.dart';
+
+import '../top_level_providers.dart';
 
 class OnboardNamePage extends StatefulWidget {
   @override
@@ -15,12 +20,14 @@ class _OnboardNamePageState extends State<OnboardNamePage> {
 
   String _firstName;
   String _lastName;
+  bool _isSaving;
 
   @override
   void initState() {
     super.initState();
     _firstName = '';
     _lastName = '';
+    _isSaving = false;
   }
 
   @override
@@ -76,15 +83,44 @@ class _OnboardNamePageState extends State<OnboardNamePage> {
     return 'Name can not contain special characters or emoji';
   }
 
-  void _onFormSubmit() {
-    // hide keyboard if neccesary
+  Future<bool> _saveChanges() async {
+    setState(() => _isSaving = true);
+    bool success = true;
+    final userprofile = UserProfile(
+      uid: context.read(databaseProvider).uid,
+      firstName: _firstName,
+      lastName: _lastName,
+    );
+    try {
+      final database = context.read(databaseProvider);
+      await database.setUserProfile(userprofile);
+    } on Exception catch (e) {
+      await showExceptionDialog(
+        context,
+        title: 'Operation failed',
+        exception: e,
+      );
+      success = false;
+    }
+    setState(() => _isSaving = false);
+    return success;
+  }
+
+  void _onFormSubmit() async {
+    if (_isSaving) {
+      return;
+    }
+    // hide keyboard if necessary
     FocusScope.of(context).requestFocus(FocusNode());
     final form = _formKey.currentState;
     if (!form.validate()) {
       return;
     }
     form.save();
-    Navigator.pop(context);
+    final success = await _saveChanges();
+    if (success && mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   PlatformAppBar _buildAppBar(BuildContext context) {
@@ -205,27 +241,19 @@ class _OnboardNamePageState extends State<OnboardNamePage> {
     );
   }
 
-  Widget _buildLetsGoButton() {
+  Widget _buildNextButton() {
     return StyledButton(
       color: Theme.of(context).colorScheme.primary,
       textColor: Colors.white,
       borderColor: Theme.of(context).colorScheme.primary,
-      onPressed: () async {
-        // await Navigator.push<bool>(
-        //   context,
-        //   platformPageRoute(
-        //     context: context,
-        //     builder: (_) {},
-        //   ),
-        // );
-      },
+      onPressed: _onFormSubmit,
       child: Row(
         children: [
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
-                'Lets\'s Go',
+                'Let\'s Get Started',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.button.copyWith(
                       color: Colors.white,
@@ -255,7 +283,7 @@ class _OnboardNamePageState extends State<OnboardNamePage> {
       const SizedBox(height: 32.0),
       _buildLastNameTextFormField(),
       const SizedBox(height: 32.0),
-      _buildLetsGoButton(),
+      _buildNextButton(),
     ];
 
     // wrap in a form

@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:starter_architecture_flutter_firebase/app/onboarding/onboard_log_in_page.dart';
 import 'package:starter_architecture_flutter_firebase/app/onboarding/onboard_sign_up_page.dart';
-import 'package:starter_architecture_flutter_firebase/app/onboarding/onboarding_view_model.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
 
 class OnboardWelcomePage extends StatelessWidget {
-  Future<void> onGetStarted(BuildContext context) async {
-    final onboardingViewModel = context.read(onboardingViewModelProvider);
-    await onboardingViewModel.completeOnboarding();
-  }
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(

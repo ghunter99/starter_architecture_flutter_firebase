@@ -6,6 +6,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_back_button.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_button.dart';
+import 'package:starter_architecture_flutter_firebase/styled_components/styled_confirm_dialog.dart';
 import 'package:starter_architecture_flutter_firebase/styled_components/styled_ok_dialog.dart';
 import 'package:starter_architecture_flutter_firebase/util.dart';
 import 'package:string_validators/string_validators.dart';
@@ -25,6 +26,7 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
   bool _isLoading;
   String _email;
   String _password;
+  bool _hasPressedForgotPassword;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
     _isLoading = false;
     _email = '';
     _password = '';
+    _hasPressedForgotPassword = false;
   }
 
   @override
@@ -43,16 +46,16 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
   }
 
   void _onPressedBackButton(BuildContext context) {
-    // hide keyboard if neccesary
+    // hide keyboard if necessary
     FocusScope.of(context).requestFocus(FocusNode());
     Navigator.pop(context);
   }
 
   void _onFormSubmit() async {
-    if (_isLoading) {
+    if (_isLoading || _hasPressedForgotPassword) {
       return;
     }
-    // hide keyboard if neccesary
+    // hide keyboard if necessary
     FocusScope.of(context).requestFocus(FocusNode());
     final form = _formKey.currentState;
     if (!form.validate()) {
@@ -88,7 +91,66 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
     }
     setState(() => _isLoading = false);
     print('user credentials: $userCredential');
-    // TODO: need to check if we have needed profile info
+    Navigator.pop(context);
+  }
+
+  void _onPressedForgotPassword() async {
+    if (_isLoading || _hasPressedForgotPassword) {
+      return;
+    }
+    setState(() => _hasPressedForgotPassword = true);
+    // hide keyboard if necessary
+    FocusScope.of(context).requestFocus(FocusNode());
+    final form = _formKey.currentState;
+    if (!form.validate()) {
+      _hasPressedForgotPassword = false;
+      return;
+    }
+    form.save();
+    final confirm = await showPlatformDialog<bool>(
+      context: context,
+      builder: (_) => StyledConfirmDialog(
+        title: 'Reset Password',
+        content: 'This will send you an email to reset your password',
+      ),
+    );
+    if (!confirm) {
+      setState(() => _hasPressedForgotPassword = false);
+      return;
+    }
+    try {
+      final firebaseAuth = context.read(firebaseAuthProvider);
+      await firebaseAuth.sendPasswordResetEmail(email: _email);
+    } on PlatformException catch (e) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (_) => StyledOkDialog(
+          title: 'Failed to send reset password email',
+          content: util.stripFirebaseHeaderFromMessage(e.message),
+        ),
+      );
+      setState(() => _hasPressedForgotPassword = false);
+      return;
+    } on Exception catch (e) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (_) => StyledOkDialog(
+          title: 'Reset password failed',
+          content: util.stripFirebaseHeaderFromMessage('$e'),
+        ),
+      );
+      setState(() => _hasPressedForgotPassword = false);
+      return;
+    }
+    setState(() => _hasPressedForgotPassword = false);
+    await showPlatformDialog<void>(
+      context: context,
+      builder: (_) => StyledOkDialog(
+        title: 'Email Sent',
+        content:
+            'Please check your email for instructions to reset your password',
+      ),
+    );
     Navigator.pop(context);
   }
 
@@ -208,7 +270,14 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
         _password = value;
         setState(() {});
       },
-      validator: util.passwordValidator,
+//      validator: _hasPressedForgotPassword ? null : util.passwordValidator,
+      validator: (str) {
+        // Don't check password if user has pressed forgot password button
+        if (_hasPressedForgotPassword) {
+          return null;
+        }
+        return util.passwordValidator(str);
+      },
       onSaved: (str) => _password = str.trim(),
       onFieldSubmitted: (_) => _onFormSubmit(),
     );
@@ -269,10 +338,7 @@ class _OnboardLogInPageState extends State<OnboardLogInPage> {
       Padding(
         padding: const EdgeInsets.only(left: 12),
         child: _ForgotPasswordButton(
-          onPressed: () => StyledOkDialog.show(
-            context,
-            title: 'Not implemented yet',
-          ),
+          onPressed: _onPressedForgotPassword,
         ),
       ),
       const SizedBox(height: 16.0),

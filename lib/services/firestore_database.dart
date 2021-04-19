@@ -4,6 +4,7 @@ import 'package:firestore_service/firestore_service.dart';
 import 'package:meta/meta.dart';
 import 'package:starter_architecture_flutter_firebase/app/home/models/entry.dart';
 import 'package:starter_architecture_flutter_firebase/app/home/models/job.dart';
+import 'package:starter_architecture_flutter_firebase/model/user_profile.dart';
 import 'package:starter_architecture_flutter_firebase/services/firestore_path.dart';
 
 String documentIdFromCurrentDate() => DateTime.now().toIso8601String();
@@ -58,5 +59,16 @@ class FirestoreDatabase {
             : null,
         builder: (data, documentID) => Entry.fromMap(data, documentID),
         sort: (lhs, rhs) => rhs.start.compareTo(lhs.start),
+      );
+
+  Future<void> setUserProfile(UserProfile userInfo) => _service.setData(
+        path: FirestorePath.user(uid),
+        data: userInfo.toMap(),
+      );
+
+  Stream<UserProfile> userProfileStream({@required String uid}) =>
+      _service.documentStream(
+        path: FirestorePath.user(uid),
+        builder: (data, documentId) => UserProfile.fromMap(data),
       );
 }

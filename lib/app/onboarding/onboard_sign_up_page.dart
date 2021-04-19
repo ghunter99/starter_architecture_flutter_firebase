@@ -43,7 +43,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
   }
 
   void _onPressedBackButton(BuildContext context) {
-    // hide keyboard if neccesary
+    // hide keyboard if necessary
     FocusScope.of(context).requestFocus(FocusNode());
     Navigator.pop(context);
   }
@@ -52,7 +52,7 @@ class _OnboardSignupPageState extends State<OnboardSignupPage> {
     if (_isLoading) {
       return;
     }
-    // hide keyboard if neccesary
+    // hide keyboard if necessary
     FocusScope.of(context).requestFocus(FocusNode());
     final form = _formKey.currentState;
     if (!form.validate()) {

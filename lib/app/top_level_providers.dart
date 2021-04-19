@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
+import 'package:starter_architecture_flutter_firebase/model/user_profile.dart';
 import 'package:starter_architecture_flutter_firebase/services/firestore_database.dart';
 
 final firebaseAuthProvider =
@@ -16,6 +17,16 @@ final databaseProvider = Provider<FirestoreDatabase>((ref) {
     return FirestoreDatabase(uid: auth.data?.value?.uid);
   }
   return null;
+});
+
+final userProfileStreamProvider =
+    StreamProvider.autoDispose<UserProfile>((ref) {
+  final database = ref.watch(databaseProvider);
+
+  if (database?.uid != null) {
+    return database.userProfileStream(uid: database.uid);
+  }
+  return Stream.empty();
 });
 
 final loggerProvider = Provider<Logger>((ref) => Logger(

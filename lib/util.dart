@@ -86,6 +86,6 @@ class util {
         result = list[1];
       }
     }
-    return result;
+    return result.trim();
   }
 }
